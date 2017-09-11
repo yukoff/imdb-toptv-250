@@ -4,7 +4,7 @@ require 'scraperwiki.php';
  * Basic PHP scraper
  **************************************/
 
-$html = scraperwiki::scrape("http://www.imdb.com/chart/top");
+$html = scraperwiki::scrape("http://www.imdb.com/chart/toptv");
 $html = oneline($html);
 
 preg_match_all('|<tr bgcolor="#.*?" valign="top"><td align="right"><font face="Arial, Helvetica, sans-serif" size="-1"><b>(.*?)\.</b></font></td><td align="center"><font face="Arial, Helvetica, sans-serif" size="-1">(.*?)</font></td><td><font face="Arial, Helvetica, sans-serif" size="-1"><a href="(.*?)">(.*?)</a> \((.*?)\)</font></td><td align="right"><font face="Arial, Helvetica, sans-serif" size="-1">.*?</font></td></tr>|', $html, $arr);
