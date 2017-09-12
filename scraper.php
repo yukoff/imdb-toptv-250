@@ -4,21 +4,52 @@ require 'scraperwiki.php';
  * Basic PHP scraper
  **************************************/
 
-$html = scraperwiki::scrape("http://www.imdb.com/chart/toptv");
+$baseUrl = 'http://www.imdb.com';
+$scrapeDate = new DateTime();
+
+$html = scraperwiki::scrape("${baseUrl}/chart/toptv");
 $html = oneline($html);
+$xml = @DOMDocument::loadHTML($html);
+$xpath = new DOMXPath($xml);
 
-preg_match_all('|<tr bgcolor="#.*?" valign="top"><td align="right"><font face="Arial, Helvetica, sans-serif" size="-1"><b>(.*?)\.</b></font></td><td align="center"><font face="Arial, Helvetica, sans-serif" size="-1">(.*?)</font></td><td><font face="Arial, Helvetica, sans-serif" size="-1"><a href="(.*?)">(.*?)</a> \((.*?)\)</font></td><td align="right"><font face="Arial, Helvetica, sans-serif" size="-1">.*?</font></td></tr>|', $html, $arr);
+/** @var DOMNodeList $titles */
+$titles = $xpath->query('//table/tbody/tr');
 
-foreach ($arr[1] as $key => $val) {
+/** @var DOMElement $title */
+foreach ($titles as $title) {
+    /** @var DOMNodeList $cols */
+    $cols = $title->getElementsByTagName('td');
+
+    /** @var DOMElement $rankTitle */
+    $rankTitleYear = $cols->item(1);
+    preg_match('|(\d+)\.\s*(.*?)\s*\((.*?)\)|', trim($rankTitleYear->nodeValue), $arr);
+
+    /** @var DOMElement $link */
+    $link = $rankTitleYear->getElementsByTagName('a')->item(0);
+
+    /** @var string $href */
+    $href = $baseUrl . $link->getAttribute('href');
+    $url = parse_url($href);
+    $href = sprintf('%s://%s%s', $url['scheme'], $url['host'], $url['path']);
+    preg_match('|/title/([^/]+)/?|', $url['path'], $id);
+    $id = $id[1];
+
+    /** @var string $rating */
+    $rating = $cols->item(2)->nodeValue;
+
+    $data = [
+        'id' => ((integer) clean($arr[1])),
+        'imdb_id' => $id,
+        'title' => clean($arr[2]),
+        'year' => clean($arr[3]),
+        'rating' => clean($rating),
+        'link' => clean($href),
+        // 'date' => $scrapeDate,
+    ];
     scraperwiki::save([
-        'rank'
-    ], [
-        'rank' => "" . clean($arr[1][$key]),
-        'rating' => clean($arr[2][$key]),
-        'name' => clean($arr[4][$key]),
-        'year' => clean($arr[5][$key]),
-        'link' => clean('http://www.imdb.com' . $arr[3][$key])
-    ]);
+        'id',
+        'imdb_id',
+    ], $data);
 }
 
 function clean($val)
